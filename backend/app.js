@@ -60,6 +60,10 @@ async function fileToGenerativePart(path) {
     console.log(`Reading file: ${path}`);
     const stats = await fs.promises.stat(path);
     console.log(`File size: ${stats.size} bytes`);
+
+
+
+    
     
     const fileBuffer = await fs.promises.readFile(path);
     console.log(`File read successfully, buffer length: ${fileBuffer.length}`);
