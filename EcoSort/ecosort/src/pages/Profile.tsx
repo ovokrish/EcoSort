@@ -1,15 +1,77 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, LogOut, Camera, Award, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/lib/toast';
+import { fromProfiles } from '@/lib/supabase';
 
 const Profile = () => {
-  const { currentUser, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [profile, setProfile] = useState({ 
+    display_name: '', 
+    points: 0,
+    scans: 0,
+    badges: []
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Check for refresh parameter in URL to force data reload
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const shouldRefresh = queryParams.get('refresh') === 'true';
+    
+    if (shouldRefresh && user) {
+      // Clean up the URL
+      const cleanUrl = location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      
+      // Reload user data
+      loadUserProfile(user.id);
+    }
+  }, [location, user]);
+
+  // Fix: Move the navigation logic to useEffect
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    } else {
+      // Fetch profile data from Supabase
+      loadUserProfile(user.id);
+    }
+  }, [user, navigate]);
+
+  const loadUserProfile = async (userId) => {
+    try {
+      setLoading(true);
+      const { data, error } = await fromProfiles()
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setProfile({
+          display_name: data.display_name || 'Eco Warrior',
+          points: data.points || 0,
+          scans: data.scans || 0,
+          badges: data.badges || []
+        });
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      toast.error('Failed to load profile data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -21,12 +83,19 @@ const Profile = () => {
     }
   };
 
-  if (!currentUser) {
-    navigate('/auth');
-    return null;
+  // Add a conditional return while checking auth
+  if (!user || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-ecosort-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
   }
 
-  const calculateLevel = (points: number) => {
+  const calculateLevel = (points) => {
     if (points < 50) return 'Beginner';
     if (points < 150) return 'Recycler';
     if (points < 300) return 'Eco Warrior';
@@ -34,8 +103,10 @@ const Profile = () => {
     return 'Sustainability Master';
   };
 
-  const level = calculateLevel(currentUser.points || 0);
-  const progress = Math.min(100, ((currentUser.points || 0) % 100) / 100 * 100);
+  const level = calculateLevel(profile.points);
+  const progress = Math.min(100, (profile.points % 100) / 100 * 100);
+  const photoURL = user.user_metadata?.avatar_url;
+  const displayName = profile.display_name;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -54,20 +125,20 @@ const Profile = () => {
       <div className="max-w-xl mx-auto p-4">
         <div className="flex flex-col items-center -mt-12 mb-6">
           <div className="h-24 w-24 rounded-full bg-white p-1 shadow-md">
-            {currentUser.photoURL ? (
+            {photoURL ? (
               <img 
-                src={currentUser.photoURL} 
-                alt={currentUser.displayName || 'User'} 
+                src={photoURL} 
+                alt={displayName} 
                 className="h-full w-full rounded-full object-cover"
               />
             ) : (
               <div className="h-full w-full rounded-full bg-ecosort-secondary flex items-center justify-center text-white text-2xl font-bold">
-                {(currentUser.displayName || 'U')[0]}
+                {(displayName || 'U')[0]}
               </div>
             )}
           </div>
-          <h2 className="mt-4 text-xl font-bold">{currentUser.displayName}</h2>
-          <p className="text-gray-600">{currentUser.email}</p>
+          <h2 className="mt-4 text-xl font-bold">{displayName}</h2>
+          <p className="text-gray-600">{user.email}</p>
           
           <div className="mt-2 px-3 py-1 bg-ecosort-accent/20 text-ecosort-accent rounded-full text-sm font-medium">
             {level}
@@ -79,7 +150,7 @@ const Profile = () => {
               style={{ width: `${progress}%` }}
             ></div>
           </div>
-          <p className="mt-1 text-sm text-gray-600">{currentUser.points} points</p>
+          <p className="mt-1 text-sm text-gray-600">{profile.points} points</p>
         </div>
 
         <Card className="mb-6">
@@ -94,14 +165,14 @@ const Profile = () => {
                   <Camera className="h-5 w-5 text-ecosort-primary mr-2" />
                   <h3 className="font-medium">Total Scans</h3>
                 </div>
-                <p className="text-2xl font-bold">{currentUser.scans || 0}</p>
+                <p className="text-2xl font-bold">{profile.scans}</p>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex items-center mb-2">
                   <Award className="h-5 w-5 text-ecosort-highlight mr-2" />
                   <h3 className="font-medium">Badges</h3>
                 </div>
-                <p className="text-2xl font-bold">{currentUser.badges?.length || 0}</p>
+                <p className="text-2xl font-bold">{profile.badges.length}</p>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg col-span-2">
                 <div className="flex items-center mb-2">
@@ -109,7 +180,7 @@ const Profile = () => {
                   <h3 className="font-medium">Waste Impact</h3>
                 </div>
                 <p className="text-gray-600">
-                  You've properly disposed of {currentUser.scans || 0} items, helping reduce pollution and landfill waste.
+                  You've properly disposed of {profile.scans} items, helping reduce pollution and landfill waste.
                 </p>
               </div>
             </div>

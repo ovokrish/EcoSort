@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Recycle, Trash, Battery, Apple, Leaf, Package, ChevronDown, ChevronUp, MessageSquare, Info } from 'lucide-react';
+import { Recycle, Trash, Battery, Apple, Leaf, Package, ChevronDown, ChevronUp, MessageSquare, Info, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { WasteClassificationResult } from '@/services/wasteClassification';
@@ -12,6 +12,7 @@ type Props = {
   imageUrl: string;
   classificationData: WasteClassificationResult;
   onScanAgain: () => void;
+  onComplete?: () => void; // Optional callback for when user is done
 };
 
 const getWasteIcon = (type: string) => {
@@ -70,7 +71,7 @@ const isRecyclable = (type: string): boolean => {
   }
 };
 
-const ClassificationResult: React.FC<Props> = ({ imageUrl, classificationData, onScanAgain }) => {
+const ClassificationResult: React.FC<Props> = ({ imageUrl, classificationData, onScanAgain, onComplete }) => {
   const [detailsOpen, setDetailsOpen] = useState(true);
   const recyclable = isRecyclable(classificationData.wasteType);
 
@@ -192,13 +193,26 @@ const ClassificationResult: React.FC<Props> = ({ imageUrl, classificationData, o
               </CollapsibleContent>
             </Collapsible>
 
-            <Button 
-              onClick={onScanAgain} 
-              className="w-full mt-4"
-              variant="outline"
-            >
-              Scan Another Item
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button 
+                onClick={onScanAgain} 
+                className="w-full"
+                variant="outline"
+              >
+                Scan Another Item
+              </Button>
+              
+              {onComplete && (
+                <Button 
+                  onClick={onComplete} 
+                  className="w-full"
+                  variant="default"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Done
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

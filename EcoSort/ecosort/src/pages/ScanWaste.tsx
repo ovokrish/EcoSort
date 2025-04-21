@@ -22,11 +22,11 @@ const ScanWaste = () => {
   const [classification, setClassification] = useState<WasteClassificationResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState<string>('');
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleImageCaptured = async (imageData: string, classificationResult: WasteClassificationResult) => {
-    if (!currentUser) {
+    if (!user) {
       toast.error('Please login to scan waste');
       navigate('/auth');
       return;
@@ -41,7 +41,7 @@ const ScanWaste = () => {
       
       // Record the scan
       setProcessingStep('Recording scan and calculating eco-points...');
-      await recordWasteScan(currentUser.id, classificationResult.wasteType, imageData);
+      await recordWasteScan(user.id, classificationResult.wasteType, imageData);
       
       // Show success message with points
       const points = calculatePoints(classificationResult.wasteType);
@@ -62,7 +62,7 @@ const ScanWaste = () => {
   };
 
   const handleManualSubmit = async (wasteType: string, description: string, isGeminiQuestion: boolean = false) => {
-    if (!currentUser) {
+    if (!user) {
       toast.error('Please login to classify waste');
       navigate('/auth');
       return;
@@ -103,11 +103,15 @@ const ScanWaste = () => {
           setCapturedImage(placeholderImage);
           
           // Record the interaction (optional for questions)
-          await recordWasteScan(currentUser.id, wasteType, placeholderImage);
+          await recordWasteScan(user.id, wasteType, placeholderImage);
           
           // Show success message
           toast.success(`Here's guidance on ${wasteType.toLowerCase()} waste!`);
           
+          // Return early since we're showing the result now
+          setIsProcessing(false);
+          setProcessingStep('');
+          return;
         } catch (error) {
           console.error('Error with Gemini Q&A:', error);
           
@@ -138,9 +142,12 @@ const ScanWaste = () => {
           setCapturedImage(placeholderImage);
           
           toast.warning("Couldn't connect to Gemini AI. Using local database instead.");
+          
+          // Return early since we're showing the result now
+          setIsProcessing(false);
+          setProcessingStep('');
+          return;
         }
-        
-        return;
       }
       
       // Otherwise, handle as normal waste type classification
@@ -204,7 +211,7 @@ const ScanWaste = () => {
       
       // Record the scan
       setProcessingStep('Recording scan and calculating eco-points...');
-      await recordWasteScan(currentUser.id, formattedWasteType, placeholderImage);
+      await recordWasteScan(user.id, formattedWasteType, placeholderImage);
       
       // Show success message with points
       const points = calculatePoints(formattedWasteType);
@@ -364,6 +371,17 @@ const ScanWaste = () => {
     return 'Follow the general guidelines for this waste type. When in doubt, contact your local recycling facility.';
   };
 
+  // Add function to return to dashboard with refresh signal
+  const goToDashboard = () => {
+    navigate('/dashboard?refresh=true');
+  };
+
+  // Function that handles when user is done with the scan result
+  const handleScanComplete = () => {
+    // Navigate to dashboard with refresh parameter
+    goToDashboard();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-ecosort-primary p-4 text-white">
@@ -391,6 +409,7 @@ const ScanWaste = () => {
             imageUrl={capturedImage}
             classificationData={classification}
             onScanAgain={resetScan}
+            onComplete={handleScanComplete}
           />
         ) : (
           <Tabs defaultValue="camera" className="w-full">

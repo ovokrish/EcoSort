@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,45 +5,101 @@ import { Trophy, Camera, MessageSquare, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getUserScans, ScanRecord } from '@/services/ecoPoints';
 import { formatDistanceToNow } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { fromProfiles } from '@/lib/supabase';
+
 
 const Dashboard = () => {
-  const { currentUser, loading } = useAuth();
+  const [points, setPoints] =  useState("");
+  useEffect(()=>{
+    const a = localStorage.getItem("ecoPoints");
+    setPoints(a);
+  })
+  const { user, loading } = useAuth();
   const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState({ 
+    display_name: 'Eco Warrior', 
+    points: 0,
+
+    scans: 0,
+    badges: []
+  });
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check for refresh parameter in URL to force data reload
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const shouldRefresh = queryParams.get('refresh') === 'true';
+    
+    if (shouldRefresh && user) {
+      // Clean up the URL
+      const cleanUrl = location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      
+      // Reload user data
+      loadUserData(user.id);
+    }
+  }, [location, user]);
 
   useEffect(() => {
     // Check authentication status after auth loading is complete
-    if (!loading && !currentUser) {
+    if (!loading && !user) {
       navigate('/auth');
-      return;
     }
+  }, [user, loading, navigate]);
 
-    const loadUserScans = async () => {
-      if (currentUser) {
-        try {
-          const scans = await getUserScans(currentUser.id);
-          setRecentScans(scans.slice(0, 5)); // Get 5 most recent
-        } catch (error) {
-          console.error('Error loading scans:', error);
-        } finally {
-          setIsLoading(false);
-        }
+  useEffect(() => {
+    if (user) {
+      loadUserData(user.id);
+    }
+  }, [user]);
+
+  const loadUserData = async (userId) => {
+    if (!userId) return;
+    
+    setIsLoading(true);
+    try {
+      // Load profile data
+      const { data, error } = await fromProfiles()
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (error) {
+        throw error;
       }
-    };
-
-    if (currentUser) {
-      loadUserScans();
+    
+      if (data) {
+        const localPoints = parseInt(localStorage.getItem('ecoPoints')) || 0;
+      
+        setProfile({
+          display_name: data.display_name || 'Eco Warrior',
+          points: localPoints,
+          scans:  localPoints/5,
+          badges: data.badges || []
+        });
+      }
+      
+      
+      
+      // Load recent scans
+      const scans = await getUserScans(userId);
+      setRecentScans(scans.slice(0, 5)); // Get 5 most recent
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [currentUser, loading, navigate]);
+  };
 
   const navigateTo = (path: string) => {
     navigate(path);
   };
 
   // Show loading state while auth is initializing
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -56,7 +111,7 @@ const Dashboard = () => {
   }
 
   // Auth check done in useEffect, this is just to satisfy TypeScript
-  if (!currentUser) {
+  if (!user) {
     return null;
   }
 
@@ -64,17 +119,17 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-ecosort-primary text-white p-6">
         <div className="max-w-xl mx-auto">
-          <h1 className="text-2xl font-bold mb-2">Welcome, {currentUser.displayName || 'Eco Warrior'}</h1>
+          <h1 className="text-2xl font-bold mb-2">Welcome, {profile.display_name}</h1>
           <p className="opacity-90">Your journey to a greener planet continues</p>
           
           <div className="grid grid-cols-2 gap-4 mt-6">
             <div className="bg-white/10 rounded-lg p-4">
               <p className="text-sm opacity-80">Total Points</p>
-              <h2 className="text-2xl font-bold">{currentUser.points || 0}</h2>
+              <h2 className="text-2xl font-bold">{profile.points}</h2>
             </div>
             <div className="bg-white/10 rounded-lg p-4">
               <p className="text-sm opacity-80">Items Scanned</p>
-              <h2 className="text-2xl font-bold">{currentUser.scans || 0}</h2>
+              <h2 className="text-2xl font-bold">{profile.scans}</h2>
             </div>
           </div>
         </div>
@@ -92,7 +147,7 @@ const Dashboard = () => {
                 <span className="font-medium">Scan Waste</span>
               </button>
               <button 
-                onClick={() => navigateTo('/chat')}
+                onClick={() => navigateTo('/cht')}
                 className="flex flex-col items-center justify-center bg-ecosort-accent/10 hover:bg-ecosort-accent/20 text-ecosort-accent rounded-lg p-6 transition-colors"
               >
                 <MessageSquare className="h-8 w-8 mb-2" />
@@ -170,9 +225,9 @@ const Dashboard = () => {
                 <CardDescription>Achievements you've unlocked on your eco journey</CardDescription>
               </CardHeader>
               <CardContent>
-                {currentUser.badges && currentUser.badges.length > 0 ? (
+                {profile.badges.length > 0 ? (
                   <div className="grid grid-cols-2 gap-4">
-                    {currentUser.badges.map((badge, index) => (
+                    {profile.badges.map((badge, index) => (
                       <div key={index} className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg text-center">
                         <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-ecosort-primary text-white mb-2">
                           🏆

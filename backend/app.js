@@ -6,7 +6,9 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import dotenv from 'dotenv';
-
+import CommunityChat from './Chat.js';
+import connectDB from './ConnectDb.js';
+connectDB();
 // Initialize environment variables
 dotenv.config({ path: './.env.local' });
 
@@ -80,6 +82,31 @@ async function fileToGenerativePart(path) {
   }
 }
 
+app.get('/get-messages', async (req, res) => {
+  try {
+    const messages = await CommunityChat.find().sort({ createdAt: -1 });
+    res.json({ messages });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+app.post('/send-message', async (req, res) => {
+  const { senderId, message } = req.body;
+
+  if (!senderId || !message) {
+    return res.status(400).json({ error: 'senderId and message are required' });
+  }
+
+  try {
+    const chat = new CommunityChat({ sender: senderId, message });
+    await chat.save();
+    res.status(201).json({ success: true, message: 'Message sent', chat });
+  } catch (err) {
+    console.error('Error saving message:', err);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
 // Routes
 app.get('/', (req, res) => {
   res.send('Server is running. Send images to /analyze-image endpoint.');

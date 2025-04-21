@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Messages Table</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <h1>Test Messages Table</h1>
+  
+  <div>
+    <h2>Send a Message</h2>
+    <textarea id="message" rows="4" cols="50"></textarea><br>
+    <label><input type="checkbox" id="isWasteRelated"> Is waste related?</label><br>
+    <button id="sendButton">Send Message</button>
+    <div id="error" style="color: red;"></div>
+  </div>
+  
+  <div>
+    <h2>Recent Messages</h2>
+    <button id="refreshButton">Refresh Messages</button>
+    <div id="messages" style="border: 1px solid #ccc; padding: 10px; max-height: 300px; overflow-y: auto;"></div>
+  </div>
+
+  <script>
+    // Initialize Supabase client
+    const supabaseUrl = 'https://nloyvkejuxdhbjjmxpxr.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sb3l2a2VqdXhkaGJqam14cHhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk5MjY5NzAsImV4cCI6MjAyNTUwMjk3MH0.0YwXZQZQZQZQZQZQZQZQZQZQZQZQZQZQZQZQZQZQ';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    // DOM elements
+    const messageInput = document.getElementById('message');
+    const isWasteRelatedCheckbox = document.getElementById('isWasteRelated');
+    const sendButton = document.getElementById('sendButton');
+    const refreshButton = document.getElementById('refreshButton');
+    const messagesContainer = document.getElementById('messages');
+    const errorElement = document.getElementById('error');
+
+    // Load messages on page load
+    loadMessages();
+
+    // Event listeners
+    sendButton.addEventListener('click', sendMessage);
+    refreshButton.addEventListener('click', loadMessages);
+
+    // Function to load messages
+    async function loadMessages() {
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (error) {
+          showError(`Error loading messages: ${error.message}`);
+          return;
+        }
+
+        displayMessages(data || []);
+      } catch (error) {
+        showError(`Error: ${error.message}`);
+      }
+    }
+
+    // Function to send a message
+    async function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message) {
+        showError('Please enter a message');
+        return;
+      }
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          showError('You must be logged in to send messages');
+          return;
+        }
+
+        const { error } = await supabase.from('messages').insert([
+          {
+            message,
+            user_id: user.id,
+            user_name: user.user_metadata?.full_name || 'Anonymous',
+            is_waste_related: isWasteRelatedCheckbox.checked
+          },
+        ]);
+
+        if (error) {
+          showError(`Error sending message: ${error.message}`);
+          return;
+        }
+
+        // Clear input and reload messages
+        messageInput.value = '';
+        loadMessages();
+      } catch (error) {
+        showError(`Error: ${error.message}`);
+      }
+    }
+
+    // Function to display messages
+    function displayMessages(messages) {
+      messagesContainer.innerHTML = '';
+      
+      if (messages.length === 0) {
+        messagesContainer.innerHTML = '<p>No messages yet</p>';
+        return;
+      }
+
+      messages.forEach(message => {
+        const messageElement = document.createElement('div');
+        messageElement.style.marginBottom = '10px';
+        messageElement.style.padding = '10px';
+        messageElement.style.backgroundColor = '#f9f9f9';
+        messageElement.innerHTML = `
+          <div><strong>${message.user_name}</strong></div>
+          <div>${message.message}</div>
+          <div><small>${new Date(message.created_at).toLocaleString()}</small></div>
+        `;
+        messagesContainer.appendChild(messageElement);
+      });
+    }
+
+    // Function to show errors
+    function showError(message) {
+      errorElement.textContent = message;
+      setTimeout(() => {
+        errorElement.textContent = '';
+      }, 5000);
+    }
+  </script>
+</body>
+</html> 

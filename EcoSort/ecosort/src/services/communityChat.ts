@@ -1,86 +1,114 @@
-import { supabase } from '../lib/supabase';
-import { ChatMessage } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 
-export const sendMessage = async (message: string): Promise<void> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    throw new Error('User must be authenticated to send messages');
-  }
+export interface ChatMessage {
+  id: string;
+  created_at: string;
+  message: string;
+  user_id: string;
+  user_name: string;
+  is_waste_related: boolean;
+}
 
-  const { error } = await supabase
-    .from('chat_messages')
-    .insert([
+// Check if the messages table exists
+export const checkMessagesTableExists = async (): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('messages')
+      .select('id')
+      .limit(1);
+    
+    // If error code is 42P01, the table doesn't exist
+    return !(error && error.code === '42P01');
+  } catch (error) {
+    console.error('Error checking if messages table exists:', error);
+    return false;
+  }
+};
+
+export const getRecentMessages = async (): Promise<ChatMessage[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('is_waste_related', false)
+      .order('created_at', { ascending: true })
+      .limit(50);
+
+    if (error) {
+      console.error('Error fetching messages:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getRecentMessages:', error);
+    return [];
+  }
+};
+
+export const getWasteClassificationMessages = async (): Promise<ChatMessage[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('is_waste_related', true)
+      .order('created_at', { ascending: true })
+      .limit(50);
+
+    if (error) {
+      console.error('Error fetching waste messages:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getWasteClassificationMessages:', error);
+    return [];
+  }
+};
+
+export const sendMessage = async (message: string, isWasteRelated: boolean = false): Promise<void> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase.from('messages').insert([
       {
-        user_id: user.id,
         message,
+        user_id: user.id,
+        user_name: user.user_metadata?.full_name || 'Anonymous',
+        is_waste_related: isWasteRelated
       },
     ]);
 
-  if (error) {
-    console.error('Error sending message:', error);
-    throw new Error('Failed to send message');
+    if (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in sendMessage:', error);
+    throw error;
   }
 };
 
-export const getRecentMessages = async (limit = 50): Promise<ChatMessage[]> => {
-  const { data, error } = await supabase
-    .from('chat_messages')
-    .select(`
-      *,
-      profiles:user_id (
-        display_name
-      )
-    `)
-    .order('created_at', { ascending: true })
-    .limit(limit);
-
-  if (error) {
-    console.error('Error fetching messages:', error);
-    throw new Error('Failed to fetch messages');
-  }
-
-  return data.map(message => ({
-    ...message,
-    user_name: message.profiles?.display_name || 'Anonymous',
-  }));
-};
-
-export const subscribeToMessages = (callback: (message: ChatMessage) => void) => {
+export const subscribeToMessages = (
+  onMessage: (message: ChatMessage) => void
+): (() => void) => {
   const subscription = supabase
-    .channel('chat_messages')
+    .channel('messages')
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
-        table: 'chat_messages',
+        table: 'messages',
       },
-      async (payload) => {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('user_id', payload.new.user_id)
-          .single();
-
-        const message: ChatMessage = {
-          ...payload.new,
-          user_name: profileData?.display_name || 'Anonymous',
-        };
-        
-        callback(message);
+      (payload) => {
+        onMessage(payload.new as ChatMessage);
       }
     )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('Successfully subscribed to chat messages');
-      } else if (status === 'CLOSED') {
-        console.log('Subscription to chat messages closed');
-      } else if (status === 'CHANNEL_ERROR') {
-        console.error('Error in chat messages subscription');
-      }
-    });
+    .subscribe();
 
   return () => {
     subscription.unsubscribe();

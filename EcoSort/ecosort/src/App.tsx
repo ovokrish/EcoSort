@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +12,9 @@ import Profile from "./pages/Profile";
 import ChatEcoGuide from "./pages/ChatEcoGuide";
 import NotFound from "./pages/NotFound";
 import WasteClassifier from "./Try";
+// @ts-ignore
+import CommunityChattry from "./ChatTry";
+// import CommunityChat from "./components/chat/CommunityChat";
 // import WasteClassifie from "./Try";
 const queryClient = new QueryClient();
 
@@ -31,6 +33,7 @@ const App = () => (
           <Route path="/scan" element={<ScanWaste />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/cht" element={<CommunityChattry />} />
           <Route path="/chat" element={<ChatEcoGuide />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Leaf } from 'lucide-react';
 import LoginForm from '@/components/auth/LoginForm';
@@ -8,15 +7,15 @@ import { useNavigate } from 'react-router-dom';
 
 const Auth = () => {
   const [showLogin, setShowLogin] = useState(true);
-  const { currentUser, loading } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     // If user is already logged in, redirect to dashboard
-    if (currentUser && !loading) {
+    if (user && !loading) {
       navigate('/dashboard');
     }
-  }, [currentUser, loading, navigate]);
+  }, [user, loading, navigate]);
 
   // Show loading indicator while checking auth status
   if (loading) {

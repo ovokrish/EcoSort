@@ -1,0 +1,133 @@
+// EcoSort Application - Core Functionality Pseudocode
+
+// 1. AUTHENTICATION FLOW
+function userAuthentication():
+    if user has existing account:
+        prompt for email and password
+        send credentials to Supabase authentication service
+        if credentials valid:
+            retrieve user profile from database
+            store user session
+            redirect to Dashboard
+        else:
+            display error message
+    else:
+        prompt for registration details (email, password, name)
+        create new user in Supabase auth
+        create user profile in profiles table
+        initialize points = 0, scans = 0
+        redirect to Dashboard
+
+// 2. DASHBOARD FUNCTIONALITY
+function loadDashboard():
+    check URL for refresh parameter
+    if refresh = true:
+        force reload of user data
+        clean URL parameters
+    
+    fetch user profile data from Supabase
+    display user name, points, scan count
+    display recent activity
+    provide navigation options (Scan, Leaderboard, Profile)
+
+// 3. WASTE SCANNING AND CLASSIFICATION
+function scanWaste():
+    initialize camera or allow image upload
+    
+    if camera access:
+        display camera interface
+        capture image
+    else:
+        prompt for image upload
+        
+    compress image if necessary
+    send image to Node.js server
+    
+    // Server-side processing
+    receive image from client
+    prepare image for Gemini API
+    send to Gemini API with prompt for waste classification
+    
+    receive classification result
+    extract waste type, recyclability status
+    return result to client
+    
+    // Client-side processing
+    display classification result
+    update user points based on scan
+    increment scan count
+    provide options for user (submit or rescan)
+    
+    if user submits:
+        update Supabase database with new points, scan count
+        navigate to Dashboard with refresh parameter
+    else:
+        reset scan interface for new attempt
+
+// 4. MANUAL SUBMISSION
+function handleManualSubmit(wasteType):
+    validate selection
+    determine points based on waste type
+    update user's profile in database:
+        increment total points
+        increment scan count
+    display confirmation message
+    navigate to Dashboard with refresh parameter
+
+// 5. LEADERBOARD FUNCTIONALITY
+function loadLeaderboard():
+    check URL for refresh parameter
+    if refresh = true:
+        force reload of leaderboard data
+        clean URL parameters
+    
+    // In production:
+    // fetch global leaderboard data from database
+    // sort users by points in descending order
+    // assign ranks
+    
+    // For demonstration:
+    generate hardcoded leaderboard of 15 global users
+    assign current user to position 1990
+    
+    display leaderboard entries with:
+        rank
+        user name and region
+        points
+        scan count
+    
+    highlight current user's position
+    display motivational message
+
+// 6. PROFILE MANAGEMENT
+function loadUserProfile():
+    check URL for refresh parameter
+    if refresh = true:
+        force reload of profile data
+        clean URL parameters
+    
+    fetch user data from Supabase
+    display user information:
+        name
+        email
+        points
+        scan count
+        badges/achievements
+    
+    provide option to edit profile or log out
+    
+    if edit profile selected:
+        display editable fields
+        save changes to database
+        refresh profile display
+
+// 7. DATA REFRESH MECHANISM
+function refreshData(component):
+    fetch latest data from database for specified component
+    update UI to display new data
+    
+// 8. LOGOUT FUNCTIONALITY
+function logoutUser():
+    clear session data
+    invalidate Supabase session
+    redirect to login page 
