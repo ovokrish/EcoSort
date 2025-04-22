@@ -1,12 +1,11 @@
-<<<<<<< HEAD
-# EcoSort - Waste Classification App
-=======
 
->>>>>>> 8e0daba4844153955df6b2c0fc7def8812150d54
+# EcoSort - Waste Classification App
+
+
+
 
 EcoSort is an interactive application designed to promote sustainable waste management through gamification and education. Users can scan waste items to classify them, earn points, and compete on a global leaderboard. The app aims to encourage proper recycling habits while fostering an environmentally conscious community.
 
-<<<<<<< HEAD
 ## Features
 
 - **Waste Scanning & Classification**: Identify waste items using image recognition (Gemini API)
@@ -23,8 +22,7 @@ EcoSort is an interactive application designed to promote sustainable waste mana
 - **Image Recognition**: Google Gemini API
 - **Chat Functionality**: MongoDB
 
-=======
->>>>>>> 8e0daba4844153955df6b2c0fc7def8812150d54
+
 ## API Integration
 
 This project uses the following APIs:
@@ -39,7 +37,7 @@ To set up these APIs:
    VITE_GOOGLE_GEMINI_API_KEY=your_gemini_api_key
    ```
 
-<<<<<<< HEAD
+
 ## Getting Started with VSCode
 
 1. **Clone the Repository**
@@ -115,4 +113,4 @@ This application can be deployed to any hosting service that supports Node.js ap
 - AWS Amplify
 - Digital Ocean
 =======
->>>>>>> 8e0daba4844153955df6b2c0fc7def8812150d54
+

@@ -43,12 +43,16 @@ const Leaderboard = () => {
       rank: index + 1
     }));
 
+    // Get user points from localStorage to match Dashboard behavior
+    const localPoints = parseInt(localStorage.getItem('ecoPoints')) || 0;
+    const userScans = Math.floor(localPoints / 5); // Calculate scans same way as Dashboard
+
     // Create the current user entry at position 1990
     const currentUserEntry: LeaderboardEntry | null = user ? {
       id: user.id,
       displayName: user.user_metadata?.display_name || 'You',
-      points: 340,
-      scans: 71,
+      points: localPoints,
+      scans: userScans,
       rank: 1990
     } : null;
 
@@ -85,6 +89,21 @@ const Leaderboard = () => {
 
   useEffect(() => {
     loadLeaderboard();
+
+    // Add listener for localStorage changes
+    const handleStorageChange = (e) => {
+      // Only reload if ecoPoints changed
+      if (e.key === 'ecoPoints') {
+        loadLeaderboard();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const getRankIcon = (rank: number) => {
@@ -187,7 +206,55 @@ const Leaderboard = () => {
             )}
             
             <div className="p-4 text-sm text-center text-gray-500 bg-gray-50 rounded-b-lg">
-              Scan more waste to climb the leaderboard and earn badges!
+              <div className="mb-3">
+                Scan more waste to climb the leaderboard and earn badges!
+              </div>
+              
+              {currentUserEntry && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span>{currentUserEntry.points} points</span>
+                    <span>
+                      {currentUserEntry.points < 100 ? (
+                        <>Need {100 - currentUserEntry.points} more points for first badge</>
+                      ) : currentUserEntry.points < 500 ? (
+                        <>Need {500 - currentUserEntry.points} more points for next badge</>
+                      ) : currentUserEntry.points < 1000 ? (
+                        <>Need {1000 - currentUserEntry.points} more points for next badge</>
+                      ) : currentUserEntry.points < 5000 ? (
+                        <>Need {5000 - currentUserEntry.points} more points for next badge</>
+                      ) : (
+                        <>Master Eco Warrior achieved!</>
+                      )}
+                    </span>
+                  </div>
+                  
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div 
+                      className="bg-gradient-to-r from-ecosort-primary to-ecosort-secondary h-2.5 rounded-full" 
+                      style={{ 
+                        width: `${Math.min(100, currentUserEntry.points >= 5000 
+                          ? 100 
+                          : currentUserEntry.points >= 1000 
+                            ? 75 + (currentUserEntry.points - 1000) / (5000 - 1000) * 25
+                            : currentUserEntry.points >= 500 
+                              ? 50 + (currentUserEntry.points - 500) / (1000 - 500) * 25 
+                              : currentUserEntry.points >= 100 
+                                ? 25 + (currentUserEntry.points - 100) / (500 - 100) * 25
+                                : currentUserEntry.points / 100 * 25
+                        )}%` 
+                      }}
+                    ></div>
+                  </div>
+                  
+                  <div className="flex justify-between mt-2 text-xs">
+                    <span>Beginner<br/>100 pts</span>
+                    <span>Bronze<br/>500 pts</span>
+                    <span>Silver<br/>1000 pts</span>
+                    <span>Gold<br/>5000 pts</span>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

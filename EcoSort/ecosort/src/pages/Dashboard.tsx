@@ -1,27 +1,87 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Camera, MessageSquare, User } from 'lucide-react';
+import { Trophy, Camera, MessageSquare, User, Leaf, Zap, Award, Recycle, Droplet, DollarSign, FileText, Wine, Coffee } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getUserScans, ScanRecord } from '@/services/ecoPoints';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fromProfiles } from '@/lib/supabase';
 
+// Eco tips for daily inspiration
+const ecoTips = [
+  "Recycling one aluminum can saves enough energy to run a TV for 3 hours.",
+  "A single plastic bottle takes 450 years to decompose in a landfill.",
+  "The average person generates about 4.5 pounds of trash every day.",
+  "Reducing your shower by just 2 minutes saves 10 gallons of water.",
+  "Glass is 100% recyclable and can be recycled endlessly without quality loss.",
+  "Americans use 500 million plastic straws every day.",
+  "It takes 20 times less energy to make an aluminum can from recycled material.",
+  "E-waste is the fastest growing waste stream in the world.",
+  "Paper can be recycled 5-7 times before the fibers become too short."
+];
+
+// Material type icons mapping
+const materialIcons = {
+  "plastic": <DollarSign className="h-5 w-5 text-blue-500" />,
+  "glass": <Wine className="h-5 w-5 text-cyan-500" />,
+  "paper": <FileText className="h-5 w-5 text-yellow-600" />,
+  "metal": <Zap className="h-5 w-5 text-gray-500" />,
+  "organic": <Coffee className="h-5 w-5 text-green-600" />,
+  "electronic": <Zap className="h-5 w-5 text-red-500" />,
+  "default": <Recycle className="h-5 w-5 text-green-500" />
+};
 
 const Dashboard = () => {
   const [points, setPoints] =  useState("");
-  useEffect(()=>{
+  const [clickCount, setClickCount] = useState(0);
+  const [lastClickTime, setLastClickTime] = useState(0);
+  const [dailyTip, setDailyTip] = useState("");
+  
+  useEffect(() => {
     const a = localStorage.getItem("ecoPoints");
     setPoints(a);
-  })
+    
+    // Set a random eco tip for today
+    const randomTipIndex = Math.floor(Math.random() * ecoTips.length);
+    setDailyTip(ecoTips[randomTipIndex]);
+  }, []);
+  
+  // Function to handle click on points display
+  const handlePointsClick = () => {
+    const now = Date.now();
+    // Reset counter if more than 1 second between clicks
+    if (now - lastClickTime > 1000) {
+      setClickCount(1);
+    } else {
+      setClickCount(prev => prev + 1);
+    }
+    setLastClickTime(now);
+    
+    // Reset points after 10 rapid clicks
+    if (clickCount + 1 >= 10) {
+      // Reset points in localStorage
+      localStorage.removeItem('ecoPoints');
+      localStorage.setItem('ecoPoints', '0');
+      
+      // Update state
+      setPoints('0');
+      setClickCount(0);
+      
+      // Show toast or alert
+      alert('Points have been reset to 0');
+      
+      // Force reload to update all components
+      window.location.reload();
+    }
+  };
+
   const { user, loading } = useAuth();
   const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState({ 
     display_name: 'Eco Warrior', 
     points: 0,
-
     scans: 0,
     badges: []
   });
@@ -77,12 +137,10 @@ const Dashboard = () => {
         setProfile({
           display_name: data.display_name || 'Eco Warrior',
           points: localPoints,
-          scans:  localPoints/5,
+          scans: Math.floor(localPoints/5),
           badges: data.badges || []
         });
       }
-      
-      
       
       // Load recent scans
       const scans = await getUserScans(userId);
@@ -115,20 +173,41 @@ const Dashboard = () => {
     return null;
   }
 
+  // Get material icon
+  const getMaterialIcon = (type) => {
+    const lowerType = type?.toLowerCase() || '';
+    for (const [key, icon] of Object.entries(materialIcons)) {
+      if (lowerType.includes(key)) {
+        return icon;
+      }
+    }
+    return materialIcons.default;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-ecosort-primary text-white p-6">
         <div className="max-w-xl mx-auto">
           <h1 className="text-2xl font-bold mb-2">Welcome, {profile.display_name}</h1>
-          <p className="opacity-90">Your journey to a greener planet continues</p>
+          <div className="flex items-center gap-2 opacity-90">
+            <Leaf className="h-5 w-5" />
+            <p>Your journey to a greener planet continues</p>
+          </div>
+          <p className="text-xs mt-2 opacity-80 italic">"{dailyTip}"</p>
           
           <div className="grid grid-cols-2 gap-4 mt-6">
-            <div className="bg-white/10 rounded-lg p-4">
-              <p className="text-sm opacity-80">Total Points</p>
-              <h2 className="text-2xl font-bold">{profile.points}</h2>
+            <div className="bg-white/10 rounded-lg p-4 shadow-md hover:bg-white/15 transition-colors">
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-yellow-300" />
+                <p className="text-sm opacity-80">Total Points</p>
+              </div>
+              <h2 className="text-2xl font-bold cursor-pointer" onClick={handlePointsClick}>{profile.points}</h2>
             </div>
-            <div className="bg-white/10 rounded-lg p-4">
-              <p className="text-sm opacity-80">Items Scanned</p>
+            <div className="bg-white/10 rounded-lg p-4 shadow-md hover:bg-white/15 transition-colors">
+              <div className="flex items-center gap-2">
+                <Camera className="h-5 w-5 text-green-300" />
+                <p className="text-sm opacity-80">Items Scanned</p>
+              </div>
               <h2 className="text-2xl font-bold">{profile.scans}</h2>
             </div>
           </div>
@@ -141,31 +220,35 @@ const Dashboard = () => {
             <div className="grid grid-cols-2 gap-4">
               <button 
                 onClick={() => navigateTo('/try')}
-                className="flex flex-col items-center justify-center bg-ecosort-secondary/10 hover:bg-ecosort-secondary/20 text-ecosort-secondary rounded-lg p-6 transition-colors"
+                className="flex flex-col items-center justify-center bg-ecosort-secondary/10 hover:bg-ecosort-secondary/20 hover:scale-102 text-ecosort-secondary rounded-lg p-6 transition-all shadow-sm hover:shadow-md"
               >
                 <Camera className="h-8 w-8 mb-2" />
                 <span className="font-medium">Scan Waste</span>
+                <span className="text-xs mt-1 text-gray-600">Snap & Sort</span>
               </button>
               <button 
                 onClick={() => navigateTo('/cht')}
-                className="flex flex-col items-center justify-center bg-ecosort-accent/10 hover:bg-ecosort-accent/20 text-ecosort-accent rounded-lg p-6 transition-colors"
+                className="flex flex-col items-center justify-center bg-ecosort-accent/10 hover:bg-ecosort-accent/20 hover:scale-102 text-ecosort-accent rounded-lg p-6 transition-all shadow-sm hover:shadow-md"
               >
                 <MessageSquare className="h-8 w-8 mb-2" />
                 <span className="font-medium">Chat</span>
+                <span className="text-xs mt-1 text-gray-600">Ask Eco Community</span>
               </button>
               <button 
                 onClick={() => navigateTo('/leaderboard')}
-                className="flex flex-col items-center justify-center bg-ecosort-highlight/10 hover:bg-ecosort-highlight/20 text-ecosort-highlight rounded-lg p-6 transition-colors"
+                className="flex flex-col items-center justify-center bg-ecosort-highlight/10 hover:bg-ecosort-highlight/20 hover:scale-102 text-ecosort-highlight rounded-lg p-6 transition-all shadow-sm hover:shadow-md"
               >
                 <Trophy className="h-8 w-8 mb-2" />
                 <span className="font-medium">Leaderboard</span>
+                <span className="text-xs mt-1 text-gray-600">See Top Scanners</span>
               </button>
               <button 
                 onClick={() => navigateTo('/profile')}
-                className="flex flex-col items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg p-6 transition-colors"
+                className="flex flex-col items-center justify-center bg-gray-100 hover:bg-gray-200 hover:scale-102 text-gray-700 rounded-lg p-6 transition-all shadow-sm hover:shadow-md"
               >
                 <User className="h-8 w-8 mb-2" />
                 <span className="font-medium">Profile</span>
+                <span className="text-xs mt-1 text-gray-600">Track Your Journey</span>
               </button>
             </div>
           </CardContent>
@@ -177,9 +260,12 @@ const Dashboard = () => {
             <TabsTrigger value="badges">Your Badges</TabsTrigger>
           </TabsList>
           <TabsContent value="recent" className="mt-4">
-            <Card>
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Recycle className="h-5 w-5 text-ecosort-primary" />
+                  Recent Activity
+                </CardTitle>
                 <CardDescription>Your latest waste scans and points earned</CardDescription>
               </CardHeader>
               <CardContent>
@@ -188,9 +274,12 @@ const Dashboard = () => {
                     <div className="animate-pulse-light h-6 w-24 bg-gray-200 rounded"></div>
                   </div>
                 ) : recentScans.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentScans.map((scan) => (
-                      <div key={scan.id} className="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50">
+                  <div className="space-y-0">
+                    {recentScans.map((scan, index) => (
+                      <div 
+                        key={scan.id} 
+                        className={`flex items-center space-x-4 p-3 border-b last:border-b-0 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-ecosort-primary/5 transition-colors`}
+                      >
                         <div className="h-12 w-12 rounded bg-gray-200 overflow-hidden">
                           <img 
                             src={scan.imageUrl} 
@@ -199,7 +288,10 @@ const Dashboard = () => {
                           />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium capitalize">{scan.wasteType}</p>
+                          <div className="flex items-center gap-1">
+                            {getMaterialIcon(scan.wasteType)}
+                            <p className="font-medium capitalize">{scan.wasteType}</p>
+                          </div>
                           <p className="text-sm text-gray-500">
                             {formatDistanceToNow(new Date(scan.timestamp), { addSuffix: true })}
                           </p>
@@ -209,6 +301,13 @@ const Dashboard = () => {
                         </div>
                       </div>
                     ))}
+                    {recentScans.length > 0 && (
+                      <div className="text-center pt-3">
+                        <button className="text-sm text-ecosort-primary hover:text-ecosort-secondary transition-colors">
+                          View More
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
@@ -219,28 +318,103 @@ const Dashboard = () => {
             </Card>
           </TabsContent>
           <TabsContent value="badges" className="mt-4">
-            <Card>
+            <Card className="shadow-sm hover:shadow-md transition-shadow">
               <CardHeader>
-                <CardTitle>Earned Badges</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-ecosort-highlight" />
+                  Earned Badges
+                </CardTitle>
                 <CardDescription>Achievements you've unlocked on your eco journey</CardDescription>
               </CardHeader>
               <CardContent>
-                {profile.badges.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    {profile.badges.map((badge, index) => (
-                      <div key={index} className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg text-center">
-                        <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-ecosort-primary text-white mb-2">
-                          🏆
-                        </div>
-                        <h3 className="font-medium text-gray-900">{badge}</h3>
-                      </div>
-                    ))}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* First badge - either earned or placeholder */}
+                  <div className={`${profile.points >= 100 
+                      ? 'bg-gradient-to-r from-green-50 to-blue-50' 
+                      : 'bg-gray-100'} p-4 rounded-lg text-center transition-all`}
+                  >
+                    <div className={`inline-flex items-center justify-center h-12 w-12 rounded-full 
+                      ${profile.points >= 100 
+                        ? 'bg-ecosort-primary text-white' 
+                        : 'bg-gray-300 text-gray-500'} mb-2`}
+                    >
+                      {profile.points >= 100 ? '🏆' : '🔒'}
+                    </div>
+                    <h3 className="font-medium text-gray-900">Eco Starter</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {profile.points >= 100 
+                        ? 'Unlocked!' 
+                        : `Need ${100 - profile.points} more points`}
+                    </p>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>Scan more items to earn badges and achievements!</p>
+                  
+                  {/* Second badge - either earned or placeholder */}
+                  <div className={`${profile.points >= 500 
+                      ? 'bg-gradient-to-r from-green-50 to-blue-50' 
+                      : 'bg-gray-100'} p-4 rounded-lg text-center transition-all`}
+                  >
+                    <div className={`inline-flex items-center justify-center h-12 w-12 rounded-full 
+                      ${profile.points >= 500 
+                        ? 'bg-ecosort-primary text-white' 
+                        : 'bg-gray-300 text-gray-500'} mb-2`}
+                    >
+                      {profile.points >= 500 ? '🌟' : '🔒'}
+                    </div>
+                    <h3 className="font-medium text-gray-900">Green Enthusiast</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {profile.points >= 500 
+                        ? 'Unlocked!' 
+                        : `Need ${500 - profile.points} more points`}
+                    </p>
                   </div>
-                )}
+                  
+                  {/* Third badge placeholder */}
+                  <div className={`${profile.points >= 1000 
+                      ? 'bg-gradient-to-r from-green-50 to-blue-50' 
+                      : 'bg-gray-100'} p-4 rounded-lg text-center transition-all`}
+                  >
+                    <div className={`inline-flex items-center justify-center h-12 w-12 rounded-full 
+                      ${profile.points >= 1000 
+                        ? 'bg-ecosort-primary text-white' 
+                        : 'bg-gray-300 text-gray-500'} mb-2`}
+                    >
+                      {profile.points >= 1000 ? '🌍' : '🔒'}
+                    </div>
+                    <h3 className="font-medium text-gray-900">Eco Activist</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {profile.points >= 1000 
+                        ? 'Unlocked!' 
+                        : `Need ${1000 - profile.points} more points`}
+                    </p>
+                  </div>
+                  
+                  {/* Fourth badge placeholder */}
+                  <div className="bg-gray-100 p-4 rounded-lg text-center">
+                    <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-gray-300 text-gray-500 mb-2">
+                      🔒
+                    </div>
+                    <h3 className="font-medium text-gray-900">Climate Champion</h3>
+                    <p className="text-xs text-gray-500 mt-1">Unlock at 2000 points</p>
+                  </div>
+                </div>
+                
+                {/* Scan streak section */}
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-yellow-500" />
+                    Daily Scan Streak
+                  </h3>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
+                    <div className="bg-yellow-400 h-2.5 rounded-full" style={{ width: '30%' }}></div>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>3 days</span>
+                    <span>Goal: 10 days</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Scan at least one item daily to build your streak!
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
