@@ -1,0 +1,9 @@
+Please save the EcoSort logo image you provided to this directory as "ecosort-logo.png"
+
+Steps:
+1. Save the gradient leaf logo image you uploaded
+2. Rename it to "ecosort-logo.png"
+3. Place it in the public folder of the project (this same folder where this text file is located)
+4. No code changes are required - the index.html file has already been updated to reference this image
+
+Once you've done this, the EcoSort logo will appear in your browser tabs instead of the default favicon. 

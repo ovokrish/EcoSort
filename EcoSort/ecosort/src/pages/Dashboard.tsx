@@ -7,6 +7,7 @@ import { getUserScans, ScanRecord } from '@/services/ecoPoints';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fromProfiles } from '@/lib/supabase';
+import "./dashboard.css"; // Import the CSS for animations
 
 // Eco tips for daily inspiration
 const ecoTips = [
@@ -23,13 +24,72 @@ const ecoTips = [
 
 // Material type icons mapping
 const materialIcons = {
-  "plastic": <DollarSign className="h-5 w-5 text-blue-500" />,
-  "glass": <Wine className="h-5 w-5 text-cyan-500" />,
-  "paper": <FileText className="h-5 w-5 text-yellow-600" />,
-  "metal": <Zap className="h-5 w-5 text-gray-500" />,
-  "organic": <Coffee className="h-5 w-5 text-green-600" />,
-  "electronic": <Zap className="h-5 w-5 text-red-500" />,
-  "default": <Recycle className="h-5 w-5 text-green-500" />
+  "plastic": <DollarSign className="h-5 w-5" />,
+  "glass": <Wine className="h-5 w-5" />,
+  "paper": <FileText className="h-5 w-5" />,
+  "metal": <Zap className="h-5 w-5" />,
+  "organic": <Coffee className="h-5 w-5" />,
+  "electronic": <Zap className="h-5 w-5" />,
+  "default": <Recycle className="h-5 w-5" />
+};
+
+// Material type colors and backgrounds
+const materialColors = {
+  "plastic": { bg: "bg-blue-100", text: "text-blue-600", icon: "text-blue-500" },
+  "glass": { bg: "bg-cyan-100", text: "text-cyan-600", icon: "text-cyan-500" },
+  "paper": { bg: "bg-yellow-100", text: "text-yellow-700", icon: "text-yellow-600" },
+  "metal": { bg: "bg-gray-100", text: "text-gray-700", icon: "text-gray-500" },
+  "organic": { bg: "bg-green-100", text: "text-green-700", icon: "text-green-600" },
+  "electronic": { bg: "bg-red-100", text: "text-red-600", icon: "text-red-500" },
+  "default": { bg: "bg-ecosort-primary/10", text: "text-ecosort-primary", icon: "text-ecosort-primary" }
+};
+
+// Function to format dates in a more human-readable way
+const formatScanDate = (date) => {
+  const now = new Date();
+  const scanDate = new Date(date);
+  
+  // Check if it's today
+  if (scanDate.toDateString() === now.toDateString()) {
+    const hours = scanDate.getHours();
+    const minutes = scanDate.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12;
+    const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
+    return `Today, ${formattedHours}:${formattedMinutes} ${ampm}`;
+  }
+  
+  // Check if it's yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (scanDate.toDateString() === yesterday.toDateString()) {
+    return 'Yesterday';
+  }
+  
+  // If it's within the last week
+  const daysAgo = Math.floor((now.getTime() - scanDate.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysAgo < 7) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[scanDate.getDay()];
+  }
+  
+  // Otherwise return a simple date
+  return scanDate.toLocaleDateString();
+};
+
+// Group scans by date
+const groupScansByDate = (scans) => {
+  const groups = {};
+  
+  scans.forEach(scan => {
+    const date = formatScanDate(scan.timestamp);
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(scan);
+  });
+  
+  return groups;
 };
 
 const Dashboard = () => {
@@ -178,10 +238,37 @@ const Dashboard = () => {
     const lowerType = type?.toLowerCase() || '';
     for (const [key, icon] of Object.entries(materialIcons)) {
       if (lowerType.includes(key)) {
-        return icon;
+        return React.cloneElement(icon, { className: `h-5 w-5 ${getMaterialColors(type).icon}` });
       }
     }
-    return materialIcons.default;
+    return React.cloneElement(materialIcons.default, { className: `h-5 w-5 ${materialColors.default.icon}` });
+  };
+  
+  // Get material colors
+  const getMaterialColors = (type) => {
+    const lowerType = type?.toLowerCase() || '';
+    for (const [key, colors] of Object.entries(materialColors)) {
+      if (lowerType.includes(key)) {
+        return colors;
+      }
+    }
+    return materialColors.default;
+  };
+
+  // Get scan method icon
+  const getScanMethodIcon = (scan) => {
+    // This is a placeholder - in a real implementation,
+    // you'd have a field in the scan record to indicate AI vs manual
+    const isAI = scan.id.length % 2 === 0; // Just for demo purposes
+    return isAI ? (
+      <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+        <Camera className="h-3 w-3" />AI
+      </span>
+    ) : (
+      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+        <User className="h-3 w-3" />Manual
+      </span>
+    );
   };
 
   return (
@@ -261,12 +348,23 @@ const Dashboard = () => {
           </TabsList>
           <TabsContent value="recent" className="mt-4">
             <Card className="shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Recycle className="h-5 w-5 text-ecosort-primary" />
-                  Recent Activity
-                </CardTitle>
-                <CardDescription>Your latest waste scans and points earned</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Recycle className="h-5 w-5 text-ecosort-primary" />
+                    Recent Activity
+                  </CardTitle>
+                  <CardDescription>Your latest waste scans and points earned</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <select className="text-xs bg-gray-100 border px-2 py-1 rounded">
+                    <option value="all">All Types</option>
+                    <option value="plastic">Plastic</option>
+                    <option value="paper">Paper</option>
+                    <option value="glass">Glass</option>
+                    <option value="organic">Organic</option>
+                  </select>
+                </div>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -274,37 +372,96 @@ const Dashboard = () => {
                     <div className="animate-pulse-light h-6 w-24 bg-gray-200 rounded"></div>
                   </div>
                 ) : recentScans.length > 0 ? (
-                  <div className="space-y-0">
-                    {recentScans.map((scan, index) => (
-                      <div 
-                        key={scan.id} 
-                        className={`flex items-center space-x-4 p-3 border-b last:border-b-0 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-ecosort-primary/5 transition-colors`}
-                      >
-                        <div className="h-12 w-12 rounded bg-gray-200 overflow-hidden">
-                          <img 
-                            src={scan.imageUrl} 
-                            alt={scan.wasteType} 
-                            className="h-full w-full object-cover"
-                          />
+                  <div className="space-y-4">
+                    {Object.entries(groupScansByDate(recentScans)).map(([date, scans]) => (
+                      <div key={date}>
+                        <div className="date-group-header">
+                          {date}
                         </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-1">
-                            {getMaterialIcon(scan.wasteType)}
-                            <p className="font-medium capitalize">{scan.wasteType}</p>
-                          </div>
-                          <p className="text-sm text-gray-500">
-                            {formatDistanceToNow(new Date(scan.timestamp), { addSuffix: true })}
-                          </p>
-                        </div>
-                        <div className="text-ecosort-primary font-medium">
-                          +{scan.points} pts
+                        <div className="space-y-3">
+                          {scans.map((scan, index) => {
+                            const materialColor = getMaterialColors(scan.wasteType);
+                            
+                            return (
+                              <div 
+                                key={scan.id} 
+                                className="flex items-start space-x-3 p-3 rounded-lg border bg-white hover:shadow-md transition-all animate-fadeIn hover-lift"
+                              >
+                                <div className="relative">
+                                  <div className="h-14 w-14 scan-image-container bg-gray-200 overflow-hidden">
+                                    {scan.imageUrl ? (
+                                      <img 
+                                        src={scan.imageUrl} 
+                                        alt={scan.wasteType}
+                                        onError={(e) => e.currentTarget.src = '/fallback-waste-icon.png'}
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className={`${materialColor.bg} h-full w-full flex items-center justify-center`}>
+                                        {getMaterialIcon(scan.wasteType)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="scan-method">
+                                    {getScanMethodIcon(scan)}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex-1">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <div className="flex items-center gap-1">
+                                        <span className={`material-tag ${materialColor.bg} ${materialColor.text}`}>
+                                          {getMaterialIcon(scan.wasteType)}
+                                          <span className="ml-1 capitalize">{scan.wasteType}</span>
+                                        </span>
+                                      </div>
+                                      
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        {new Date(scan.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                      </p>
+                                    </div>
+                                    
+                                    <div className="flex flex-col items-end">
+                                      <div className="text-ecosort-primary font-medium animate-points">
+                                        +{scan.points} pts
+                                      </div>
+                                      
+                                      {/* Show streak if applicable */}
+                                      {index === 0 && date === 'Today' && (
+                                        <div className="streak-badge">
+                                          <Zap className="h-3 w-3" />
+                                          3-Day Streak
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Progress toward category milestone */}
+                                  <div className="mt-2">
+                                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                      <span>Category progress</span>
+                                      <span>60%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-100 h-1 rounded-full">
+                                      <div
+                                        className={`${materialColor.bg} h-1 rounded-full`}
+                                        style={{ width: '60%' }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     ))}
+                    
                     {recentScans.length > 0 && (
                       <div className="text-center pt-3">
-                        <button className="text-sm text-ecosort-primary hover:text-ecosort-secondary transition-colors">
-                          View More
+                        <button className="text-sm bg-gray-100 hover:bg-gray-200 text-ecosort-primary px-4 py-2 rounded-full transition-colors">
+                          View All Activity
                         </button>
                       </div>
                     )}

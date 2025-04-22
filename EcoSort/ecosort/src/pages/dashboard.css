@@ -1,0 +1,129 @@
+/* Dashboard animations and styles */
+
+/* Animations for Recent Activity section */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pointsPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+    color: #22c55e;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.animate-points {
+  animation: pointsPulse 1s ease-out;
+}
+
+/* Hover effects */
+.hover-lift {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Image styles */
+.scan-image-container {
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.scan-image-container:hover {
+  transform: scale(1.05);
+  cursor: pointer;
+}
+
+/* Material tag styles */
+.material-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Date group headers */
+.date-group-header {
+  position: sticky;
+  top: 0;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  padding: 4px 0;
+  font-weight: 500;
+  color: #64748b;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Streak indicator */
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 12px;
+  background-color: #fef3c7;
+  color: #b45309;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.streak-badge svg {
+  margin-right: 3px;
+  animation: streak-pulse 1.5s infinite;
+}
+
+@keyframes streak-pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+
+/* Scan method badge */
+.scan-method {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 0.65rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  z-index: 5;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .date-group-header {
+    background-color: rgba(15, 23, 42, 0.95);
+    border-bottom: 1px solid #1e293b;
+  }
+} 
